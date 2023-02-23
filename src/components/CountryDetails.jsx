@@ -1,60 +1,78 @@
-import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import Spin from "./Spin";
+import Container from "react-bootstrap/Container";
+import Card from "react-bootstrap/Card";
+import ListGroup from "react-bootstrap/ListGroup";
 
-const CountryDetails = ({ countries }) => {
-  const { countryCode } = useParams();
-  const clickedCountry = countries.filter((country) => {
-    if (country.alpha3Code === countryCode) {
-      return country;
-    }
-  });
+function CountryDetails({ countries }) {
+  const { id } = useParams();
+  const apiURL = `https://ih-countries-api.herokuapp.com/countries/${id}`;
 
-  let borderNames = [];
+  const [currentCountry, setCurrentCountry] = useState();
+  const [fetching, setFetching] = useState(true);
 
-  countries.forEach((country) => {
-    if (clickedCountry[0].borders.includes(country.alpha3Code)) {
-      borderNames.push({
-        commonName: country.name.common,
-        alpha: country.alpha3Code,
+  useEffect(() => {
+    axios
+      .get(apiURL)
+      .then((response) => {
+        setCurrentCountry(response.data);
+        setFetching(false);
+      })
+      .catch((error) => {
+        console.log("There was an error: ", error);
       });
-    }
-  });
+  }, [id]);
+
+  if (fetching) {
+    return <Spin />;
+  }
 
   return (
-    <div className="col-7">
-      <h1>{clickedCountry[0].name.common}</h1>
-      <table className="table">
-        <thead></thead>
-        <tbody>
-          <tr>
-            <td style={{ width: "30%" }}>Capital</td>
-            <td>{clickedCountry[0].capital}</td>
-          </tr>
-          <tr>
-            <td>Area</td>
-            <td>
-              {clickedCountry[0].area}km
-              <sup>2</sup>
-            </td>
-          </tr>
-          <tr>
-            <td>Borders</td>
-            <td>
-              <ul className="list-unstyled">
-                {borderNames.map((country) => {
-                  return (
-                    <li key={country.alpha} style={{ textAlign: "left" }}>
-                      <Link to={`/${country.alpha}`}>{country.commonName}</Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <Container className="mt-5 col-5 d-flex flex-column align-items-center">
+      <Card border="light" style={{ width: "18rem" }}>
+        <Card.Img
+          variant="top"
+          src={`https://flagcdn.com/w160/${currentCountry.alpha2Code.toLowerCase()}.png`}
+          alt={currentCountry.name.common}
+        />
+        <Card.Body>
+          <Card.Title className="text-center">{currentCountry.name.common}</Card.Title>
+          <ListGroup>
+            <ListGroup.Item>
+              <strong>Capital city: </strong>
+              {currentCountry.capital}
+            </ListGroup.Item>
+            <ListGroup.Item>
+              <strong>Area: </strong>
+              {currentCountry.area} km<sup>2</sup>
+            </ListGroup.Item>
+          </ListGroup>
+          <ListGroup className="mt-3">
+            <Card.Text>
+              <strong>Borders:</strong>
+            </Card.Text>
+            {currentCountry.borders.length ? (
+              currentCountry.borders.map((borderCode) => {
+                let country = countries.filter((country) => country.alpha3Code === borderCode)[0];
+                return (
+                  <ListGroup.Item className="borderCountry" as="li">
+                    <Link key={country.alpha3Code} to={`/${borderCode}`}>
+                      {country.name.common}
+                    </Link>
+                  </ListGroup.Item>
+                );
+              })
+            ) : (
+              <ListGroup.Item>There's no bordering country</ListGroup.Item>
+            )}
+          </ListGroup>
+        </Card.Body>
+      </Card>
+    </Container>
   );
-};
+}
 
 export default CountryDetails;
